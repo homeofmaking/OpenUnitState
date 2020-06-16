@@ -1,4 +1,6 @@
 # OpenUnitState
+<img src="doc/openunitstate_demo1.jpg?raw=true" alt="OpenUnitState Demo" width="250"/>
+
 An approach to "unit" status displays and authentication in open workshops and 
 makerspaces. A unit can be anything from a tool found in a workshop, a 3D printer,
 even a conventional printer or a kitchen stove. 
