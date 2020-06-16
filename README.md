@@ -4,15 +4,17 @@ makerspaces. A unit can be anything from a tool found in a workshop, a 3D printe
 even a conventional printer or a kitchen stove. 
 
 OpenUnitState aims to be "stupid by default" and therefor relies on logic 
-implemented in the background. Communication is handled through "unencrypted" MQTT
+implemented in the backend. Communication is handled through "unencrypted" MQTT
 (feel free to post a pull request to enhance this). The reason for this is that we
 compare OpenUnitState to a code lock on a device - if someone wants to go around
-it, they will find a way to. The same holds true for OpenUnitState. 
+it, they will find a way to. The same holds true for OpenUnitState. It will most
+likely be easier to rip out the wires of the unlocking mechanism and short them...
 
 OpenUnitState itself consists of a hardware and a software part. The hardware 
 consists mainly of an ESP8266 µC, a RC522 based card reader, a liquid crystal 
 display and a button. Depending on the unit you want to control you can either 
-use the 5V/VCC mosfet or a relais. 
+use the 5V/VCC mosfet or a relais. The mosfet is always required, the relais is
+an optional component.
 
 OpenUnitState does indeed depend on WiFi availability. A stable WiFi and network 
 setup is absolutely recommended when using OpenUnitState, however network is 
@@ -87,4 +89,6 @@ same action as a button press would.
 `/push_to_unlock` should be replied with `/unlocked_time` in order to unlock
 the machine upon request.
 
+## Security concerns
+Please see security.md for further information on how to report vulnerabilities.
 
