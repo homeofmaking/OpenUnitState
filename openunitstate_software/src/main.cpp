@@ -62,11 +62,14 @@ uint32_t unlockedTime = 0;
 boolean maintenanceMode = true;
 String maintenanceLongReason = "";
 
-boolean MachineRequiresAuth = false;
-boolean MachineIsPushToUnlock = false;
-boolean PermUnlocked = false;
-boolean WaitForOTA = false;
-boolean MachineIsCheckInStation = false;
+enum class Mode {
+  requiresAuth,
+  pushToUnlock,
+  permUnlocked,
+  waitingForOTA,
+  checkInStation
+};
+Mode mode;
 
 // Button config
 volatile long lastDebounceTime = 0;
@@ -170,10 +173,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     timer_quickdisplayclear.start();
     messageFlashLineTwo = String(message);
   } else if (strcmp(topic, topic_ultime.c_str())==0) {
-    if(!PermUnlocked) {
+    if(mode != Mode::permUnlocked) {
       unlockedTime = strtoul(String(message).c_str(), NULL, 10);
       timer_machinerelock.interval(unlockedTime);
       timer_machinerelock.start();
+      unlockedTime = unlockedTime;
       unitUnlock();
     } else {
       Serial.print("Tried unlocked_time call but machine is perm unlocked...");
@@ -181,43 +185,39 @@ void callback(char* topic, byte* payload, unsigned int length) {
   } else if (strcmp(topic, topic_reset.c_str())==0) {
     ESP.restart();
   } else if (strcmp(topic, topic_status.c_str())==0) {
-    MachineRequiresAuth = false;
     maintenanceMode = false;
-    PermUnlocked = false;
-    MachineIsPushToUnlock = false;
-    WaitForOTA = false;
-    MachineIsCheckInStation = false;
     if ((char)payload[0] == '5') {
       // Auth required 
-      MachineRequiresAuth = true;
+      mode = Mode::requiresAuth;
       if(!timer_machinerelock.state() == RUNNING) {
         unitLock();
       }
     } else if ((char)payload[0] == '2') {
-        // Working & Push to unlock
-      MachineIsPushToUnlock = true;
+      // Working & Push to unlock
+      mode = Mode::pushToUnlock;
       if(!timer_machinerelock.state() == RUNNING) {
         unitLock();
       }
     } else if ((char)payload[0] == '0') {
-        PermUnlocked = true;
-        unitUnlock();
-        // Working & Unlocked permanently
+      // Working & Unlocked permanently
+      mode = Mode::permUnlocked;
+      unitUnlock();
     } else if ((char)payload[0] == '-') {
+      // Not working & special modes
       if ((char)payload[1] == '1') {
         // maintenanceMode
         maintenanceMode = true;
         unitLock();
       } else if((char)payload[1] == '2') {
         maintenanceMode = true;
-        WaitForOTA = true;
+        mode = Mode::waitingForOTA;
         unitLock();
         ArduinoOTA.begin();
         
         String topic = String(MQTT_TOPIC) + String(clientid) + "/ready_for_ota";
         mqttClient.publish(topic.c_str(), clientid);
       } else if((char)payload[1] == '3') {
-        MachineIsCheckInStation = true;
+        mode = Mode::checkInStation;
       } else {
         maintenanceMode = true;
         Serial.print("Special mode not implemented.");
@@ -335,7 +335,7 @@ void loop() {
   }
   mqttClient.loop();
 
-  if(WaitForOTA) {
+  if(mode == Mode::waitingForOTA) {
     ArduinoOTA.handle();
   }
   timer_readcard.update();
@@ -447,22 +447,28 @@ void displayUpdate() {
     lcd.print(displayLineTwo);
   }
   
-
-  
-  if(maintenanceMode) {
-    lcd.setCursor(15, 0);  
-    lcd.write(byte(2));
-  } else if(PermUnlocked or (timer_machinerelock.state() == RUNNING)) {
-    lcd.setCursor(15, 0);  
-    lcd.write(byte(1));
-  } else if(MachineIsPushToUnlock) {
-    lcd.setCursor(15, 0);  
-    lcd.write(byte(3));
-  } else if(MachineRequiresAuth) {
-    lcd.setCursor(15, 0);  
+  lcd.setCursor(15, 0);
+  switch (mode)
+  {
+  case Mode::requiresAuth:
     lcd.write(byte(0));
+    break;
+  case Mode::permUnlocked:
+    lcd.write(byte(1));
+    break;
+  case Mode::pushToUnlock:
+    lcd.write(byte(3));
+    break;
+  default:
+    if (timer_machinerelock.state() == RUNNING)
+    {
+      lcd.write(byte(1));
+    } else if (maintenanceMode) {
+      lcd.write(byte(2));
+    }
+    break;
   }
-  
+    
   if(spinner) {
     lcd.setCursor(15,1);
     lcd.write(spinnerSymbols[spinnerTick%4]);
@@ -472,12 +478,9 @@ void displayUpdate() {
 }
 
 boolean idleDisplay() {
-  if (unitName.equals(String("")) and !WaitForOTA) {
+  if (unitName.equals(String("")) and mode != Mode::waitingForOTA) {
     displayLineOne = " Not configured";
     displayLineTwo = "     " + String(clientid);
-  } else if (WaitForOTA) {
-    displayLineOne = "OTA MODE " + String(clientid);
-    displayLineTwo = String((char*) ip2CharArray(WiFi.localIP()));
   } else if (maintenanceMode) {
     displayLineOne = unitName;
     if(!maintenanceLongReason.equals(String(""))) {
@@ -491,19 +494,33 @@ boolean idleDisplay() {
     } else {
       displayLineTwo = "!SERVICE MODE!";
     }
-  } else if (PermUnlocked) {
+
+  switch (mode)
+  {
+  case Mode::waitingForOTA:
+    displayLineOne = "OTA MODE " + String(clientid);
+    displayLineTwo = String((char*) ip2CharArray(WiFi.localIP()));
+    break;
+  case Mode::permUnlocked:
     displayLineOne = unitName;
     displayLineTwo = "Ready";
-  } else if (MachineIsPushToUnlock) {
+    break;
+  case Mode::pushToUnlock:
     displayLineOne = unitName;
     displayLineTwo = "Push to unlock";
-  } else if (MachineRequiresAuth) {
+    break;
+  case Mode::requiresAuth:
     displayLineOne = unitName;
     displayLineTwo = "ID to unlock";
-  } else if (MachineIsCheckInStation) {
+    break;
+  case Mode::checkInStation:
     displayLineOne = unitName;
     displayLineTwo = "Present ID";
+    break;
+  default:
+    break;
   }
+
   return true;
 }
 
@@ -517,7 +534,7 @@ void readCard() {
         // Not debouncing
         if(timer_machinerelock.state() == RUNNING) {
           machinerelock();
-        } else if (MachineIsPushToUnlock) {
+        } else if (mode == Mode::pushToUnlock) {
           pushToUnlockRequest();
         } else if (maintenanceMode) {
           // nothing for now. 
