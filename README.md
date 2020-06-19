@@ -41,6 +41,21 @@ logic.
 * WiFi manager for joining networks for easy setup and device relocation
 * Stable WiFi and MQTT re-connect implemented
 
+## Example implementations
+<details>
+    <summary>Demo Device</summary>
+    <img src="doc/openunitstate_demo1.jpg?raw=true" alt="OpenUnitState Demo" width="200"/>
+    <strong>Description:</strong> Example device used for demonstrations and development. 
+    <strong>Backend:</strong> Node-Red /w Node-Red dashboard
+</details>
+
+<details>
+    <summary>Check-In & Check-Out Terminal</summary>
+    <img src="doc/openunitstate_checkin-out1.jpg?raw=true" alt="OpenUnitState Check-In & Check-Out terminal" width="250"/>
+    <strong>Description:</strong> OpenUnitState used as a Check-In and Check-Out terminal. Part of a hygiene concept that was required by local authorities to re-open a makerspace in munich.
+    <strong>Backend:</strong> Node-Red, MySQL
+</details>
+
 
 ## MQTT connection
 Right now MQTT connection needs to be configured before building the project.
