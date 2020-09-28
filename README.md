@@ -71,7 +71,7 @@ commands found below)
 | ------ | ------ | ------ |
 | /config_name | unitName | sets the displayed unit name |
 | /config_maintenance_long_reason | maintenanceReason |  sets the long reason that is displayed when unit is in maintenance mode | 
-| /config_status | 5,2,0,-1,-2,-3 |  5 = ID to unlock, 2 = push to unlock, 0 = permanently unlocked, -1 maintenance, -2 OTA, Check-In/Out Mode | 
+| /config_status | 5,2,0,-1,-2,-3 |  5 = ID to unlock, 2 = push to unlock, 0 = permanently unlocked, -1 = maintenance, -2 = OTA, -3 = Check-In/Out Mode | 
 | /unlocked_time | secondsToUnlock |  unlocks the machine for the given time, can be called during unlocked state to set timer again  | 
 | /quick_display_msg | messageToDisplay |  Briefly displays a message on line 2 of the display |        
 | /reset | - |  calls esp.restart() to hard-reset the device | 
@@ -80,7 +80,8 @@ commands found below)
 | Topic endpoint | Payload | Description |
 | ------ | ------ | ------ |
 | /connected | (always true) | called as soon as MQTT connection is established |
-| /started | chipId | called during setup but not upon MQTT re-connect to indicate ESP was (re-)started |
+| /localip | ip address | called as soon as the MQTT connection is established |
+| /started | firmwareVersion | called during setup but NOT upon MQTT re-connect to indicate ESP was (re-)started |
 | /ready_for_ota | chipId | as soon as device is set to mode -2 (OTA) and OTA is ready |
 | /button_reported_broken | chipId | called when someone reports the device as broken using the pushbutton |
 | /push_to_unlock | chipId | called on single button press when device is in push to unlock mode |
